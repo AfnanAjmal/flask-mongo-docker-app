@@ -8,6 +8,12 @@ pipeline {
     }
     
     stages {
+        stage('Test Pipeline') {
+            steps {
+                echo 'Testing Jenkins Pipeline - DevOps Assignment'
+            }
+        }
+        
         stage('Checkout') {
             steps {
                 cleanWs()  // Clean workspace before checkout
@@ -44,9 +50,9 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Stop and remove existing containers
+                    // Stop and remove existing containers for Jenkins (running on Port 5050)
                     sh "docker-compose -p ${PROJECT_NAME} down || true"
-                    // Start new containers
+                    // Start new containers (this will run the app on Port 5050)
                     sh "docker-compose -p ${PROJECT_NAME} up -d"
                 }
             }
