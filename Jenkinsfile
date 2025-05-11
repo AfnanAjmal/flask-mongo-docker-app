@@ -52,8 +52,11 @@ pipeline {
                 script {
                     // Stop and remove existing containers for Jenkins (running on Port 5050)
                     sh "docker-compose -p ${PROJECT_NAME} down || true"
-                    // Start new containers (this will run the app on Port 5050)
-                    sh "docker-compose -p ${PROJECT_NAME} up -d"
+                    // Start new containers with build number
+                    sh """
+                        export BUILD_NUMBER=${BUILD_NUMBER}
+                        docker-compose -p ${PROJECT_NAME} up -d
+                    """
                 }
             }
         }
