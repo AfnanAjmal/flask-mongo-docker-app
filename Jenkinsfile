@@ -5,6 +5,10 @@ pipeline {
         DOCKER_IMAGE = 'afnankhan03/flask-mongo-app'
         DOCKER_TAG = "${BUILD_NUMBER}"
         PROJECT_NAME = 'flask-mongo-jenkins'
+        // Set MongoDB URI directly
+        MONGO_URI = 'mongodb+srv://afnan:afnan@cluster0.jv1iq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+        // Set the secret key directly
+        SECRET_KEY = 'ba9c73147efc5cf66b15a55e32410ef7cf1e4da81fa7a8391ada00da3c8b30c9'
     }
     
     stages {
@@ -50,7 +54,6 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Create .env file for docker-compose
                     sh """
                         # Create necessary directories
                         mkdir -p app
@@ -58,10 +61,12 @@ pipeline {
                         # Copy all application files to app directory
                         cp -r * app/ 2>/dev/null || true
                         
-                        # Create environment file
+                        # Create environment file with variables
                         echo "DOCKER_IMAGE=${DOCKER_IMAGE}" > .env
                         echo "DOCKER_TAG=${BUILD_NUMBER}" >> .env
                         echo "PROJECT_NAME=${PROJECT_NAME}" >> .env
+                        echo "MONGO_URI=${MONGO_URI}" >> .env
+                        echo "SECRET_KEY=${SECRET_KEY}" >> .env
                         
                         # Stop any existing containers
                         docker-compose -p ${PROJECT_NAME} down || true
@@ -72,8 +77,8 @@ pipeline {
                         # Pull the latest image
                         docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
                         
-                        # Start new containers
-                        docker-compose -p ${PROJECT_NAME} up -d
+                        # Start new containers with environment variables
+                        MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' docker-compose -p ${PROJECT_NAME} up -d
                         
                         # Wait for container to start
                         sleep 10
