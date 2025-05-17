@@ -5,7 +5,7 @@ services:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     container_name: ${PROJECT_NAME}_jenkins_app
     ports:
-      - "5051:5000"  # External port 5051 for Part 2 (Jenkins), internal remains 5000
+      - "5050:5000"  # External port 5050 for Part 2 (Jenkins), internal remains 5000
     environment:
       - MONGO_URI=mongodb+srv://afnan:afnan@cluster0.jv1iq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - SECRET_KEY=ba9c73147efc5cf66b15a55e32410ef7cf1e4da81fa7a8391ada00da3c8b30c9
