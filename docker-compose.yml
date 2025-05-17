@@ -10,7 +10,9 @@ services:
       - MONGO_URI=mongodb+srv://afnan:afnan@cluster0.jv1iq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - SECRET_KEY=ba9c73147efc5cf66b15a55e32410ef7cf1e4da81fa7a8391ada00da3c8b30c9
     volumes:
-      - ./jenkins_app:/app
+      - type: bind
+        source: ./jenkins_app
+        target: /app
     working_dir: /app
     restart: unless-stopped
     mem_limit: 256m
