@@ -1,14 +1,16 @@
 version: "3.8"
 
 services:
-  flask_app:
+  jenkins_flask_app:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
-    container_name: ${PROJECT_NAME}_app
+    container_name: ${PROJECT_NAME}_jenkins_app
     ports:
-      - "5050:5000"
+      - "5051:5000"  # External port 5051 for Part 2 (Jenkins), internal remains 5000
     environment:
       - MONGO_URI=mongodb+srv://afnan:afnan@cluster0.jv1iq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
       - SECRET_KEY=ba9c73147efc5cf66b15a55e32410ef7cf1e4da81fa7a8391ada00da3c8b30c9
+    volumes:
+      - ./jenkins_app:/app
     working_dir: /app
     restart: unless-stopped
     mem_limit: 256m
