@@ -14,8 +14,12 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Copy project files
-COPY . /app/
+# Copy templates and static files first
+COPY templates /app/templates/
+COPY static /app/static/
+
+# Copy remaining project files
+COPY app.py /app/
 
 # Debug: List contents
 RUN echo "Contents of /app:" && \

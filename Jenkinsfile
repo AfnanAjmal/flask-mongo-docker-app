@@ -25,6 +25,10 @@ pipeline {
                     
                     // Create directory for volume and copy files
                     sh '''
+                        # Debug current directory
+                        pwd
+                        ls -la
+                        
                         # Create directories
                         mkdir -p jenkins_app/templates
                         mkdir -p jenkins_app/static
@@ -32,30 +36,38 @@ pipeline {
                         # Copy files with debug output
                         echo "Copying files..."
                         cp app.py requirements.txt Dockerfile jenkins_app/
-                        cp -r templates/* jenkins_app/templates/
-                        cp -r static/* jenkins_app/static/
                         
-                        echo "Listing jenkins_app directory:"
-                        ls -la jenkins_app/
-                        echo "Listing templates directory:"
-                        ls -la jenkins_app/templates/
-                        echo "Listing static directory:"
-                        ls -la jenkins_app/static/
+                        echo "Copying templates..."
+                        cp -rv templates/* jenkins_app/templates/
+                        
+                        echo "Copying static files..."
+                        cp -rv static/* jenkins_app/static/
+                        
+                        echo "Final structure:"
+                        tree jenkins_app || ls -R jenkins_app
                     '''
                     
                     // Build and deploy
                     sh """
+                        cd jenkins_app
+                        
                         # Build new image
-                        docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} jenkins_app/
+                        docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
                         
                         # Stop existing container
                         docker-compose -p ${PROJECT_NAME} down || true
                         
                         # Start new container with volume
+                        cd ..
                         MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' docker-compose -p ${PROJECT_NAME} up -d
                         
                         # Show logs immediately
                         docker logs ${PROJECT_NAME}_jenkins_app
+                        
+                        # Verify container contents
+                        echo "Verifying container contents:"
+                        docker exec ${PROJECT_NAME}_jenkins_app ls -la /app
+                        docker exec ${PROJECT_NAME}_jenkins_app ls -la /app/templates
                         
                         # Quick health check
                         sleep 3
@@ -81,6 +93,8 @@ pipeline {
             sh '''
                 echo "Build failed. Container logs:"
                 docker logs ${PROJECT_NAME}_jenkins_app || true
+                echo "Container directory structure:"
+                docker exec ${PROJECT_NAME}_jenkins_app ls -R /app || true
             '''
         }
     }
