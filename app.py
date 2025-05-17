@@ -97,8 +97,7 @@ def show_people():
                              order=order)
     except Exception as e:
         app.logger.error(f"Error in show_people: {e}")
-        flash('An error occurred while fetching the data.', 'danger')
-        return redirect(url_for('show_people'))
+        return render_template('500.html', error="Database connection error. Please try again later."), 500
 
 @app.route('/add', methods=['GET', 'POST'])
 def add_person():
