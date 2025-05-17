@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  # Part 2: Jenkins Pipeline version
+  jenkins_flask_app:
+    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
+    container_name: ${PROJECT_NAME}_jenkins_app  # Different container name for Part 2
+    ports:
+      - "5050:5000"  # Different port for Part 2
+    environment:
+      - MONGO_URI=mongodb+srv://afnan:afnan@cluster0.jv1iq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - SECRET_KEY=ba9c73147efc5cf66b15a55e32410ef7cf1e4da81fa7a8391ada00da3c8b30c9
+      - FLASK_APP=app.py
+      - PYTHONPATH=/app
+    volumes:
+      - type: bind
+        source: ./jenkins_app  # Volume for code as required in Part 2
+        target: /app
+        read_only: false
+    working_dir: /app
+    user: "root"
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.3
