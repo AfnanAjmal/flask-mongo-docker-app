@@ -74,6 +74,9 @@ pipeline {
                         # Remove any old containers with the same name
                         docker ps -a | grep ${PROJECT_NAME} && docker rm -f \$(docker ps -a | grep ${PROJECT_NAME} | awk '{print \$1}') || true
                         
+                        # Clean up old images (keep the last 3)
+                        docker images | grep ${DOCKER_IMAGE} | sort -r | awk 'NR>3 {print \$3}' | xargs -r docker rmi
+                        
                         # Pull the latest image
                         docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
                         
