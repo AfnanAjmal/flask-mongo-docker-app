@@ -50,12 +50,43 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    // Stop and remove existing containers for Jenkins (running on Port 5050)
-                    sh "docker-compose -p ${PROJECT_NAME} down || true"
-                    // Start new containers with build number
+                    // Create .env file for docker-compose
                     sh """
-                        export BUILD_NUMBER=${BUILD_NUMBER}
+                        # Create necessary directories
+                        mkdir -p app
+                        
+                        # Copy all application files to app directory
+                        cp -r * app/ 2>/dev/null || true
+                        
+                        # Create environment file
+                        echo "DOCKER_IMAGE=${DOCKER_IMAGE}" > .env
+                        echo "DOCKER_TAG=${BUILD_NUMBER}" >> .env
+                        echo "PROJECT_NAME=${PROJECT_NAME}" >> .env
+                        
+                        # Stop any existing containers
+                        docker-compose -p ${PROJECT_NAME} down || true
+                        
+                        # Remove any old containers with the same name
+                        docker ps -a | grep ${PROJECT_NAME} && docker rm -f \$(docker ps -a | grep ${PROJECT_NAME} | awk '{print \$1}') || true
+                        
+                        # Pull the latest image
+                        docker pull ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        
+                        # Start new containers
                         docker-compose -p ${PROJECT_NAME} up -d
+                        
+                        # Wait for container to start
+                        sleep 10
+                        
+                        # Check if container is running
+                        if ! docker ps | grep ${PROJECT_NAME}; then
+                            echo "Container failed to start. Checking logs..."
+                            docker-compose -p ${PROJECT_NAME} logs
+                            exit 1
+                        fi
+                        
+                        echo "Container is running. Checking logs..."
+                        docker-compose -p ${PROJECT_NAME} logs
                     """
                 }
             }
