@@ -58,27 +58,44 @@ pipeline {
                         echo "Current running containers:"
                         docker ps --format "table {{.Names}}\t{{.Ports}}"
                         
-                        echo "Stopping any existing Jenkins pipeline containers..."
-                        docker compose -p ${PROJECT_NAME} down || true
-                        
                         if docker ps | grep "flask_mongo_app"; then
                             echo "✅ Manual flask_mongo_app is running safely"
                         fi
                         
-                        echo "Starting new deployment with docker compose..."
-                        MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' DOCKER_IMAGE='${DOCKER_IMAGE}' DOCKER_TAG='${DOCKER_TAG}' docker compose -p ${PROJECT_NAME} up -d
+                        # Check if Jenkins pipeline container is already running
+                        if docker ps | grep "jenkins_flask_mongo_app"; then
+                            echo "🔄 Jenkins pipeline container found - performing hot reload..."
+                            
+                            # Copy updated files to running container
+                            docker cp jenkins_app/app.py jenkins_flask_mongo_app:/app/
+                            docker cp jenkins_app/templates jenkins_flask_mongo_app:/app/
+                            docker cp jenkins_app/static jenkins_flask_mongo_app:/app/
+                            
+                            # Restart Flask app inside container
+                            docker exec jenkins_flask_mongo_app pkill -f "python.*app.py" || true
+                            sleep 2
+                            docker exec -d jenkins_flask_mongo_app python -u /app/app.py
+                            
+                            echo "✅ Hot reload completed - changes applied to running container"
+                            
+                        else
+                            echo "🚀 No Jenkins pipeline container found - deploying new container..."
+                            
+                            # Deploy new container using docker compose
+                            MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' DOCKER_IMAGE='${DOCKER_IMAGE}' DOCKER_TAG='${DOCKER_TAG}' docker compose -p ${PROJECT_NAME} up -d
+                            
+                            sleep 5
+                            echo "✅ New container deployed"
+                        fi
                         
-                        sleep 5
-                        
-                        echo "Deployment status:"
+                        echo "Final deployment status:"
                         docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
                         
                         if docker ps | grep "jenkins_flask_mongo_app"; then
                             echo "✅ Jenkins pipeline container running on port 5050"
-                            sleep 10
-                            docker logs jenkins_flask_mongo_app
+                            docker logs --tail 10 jenkins_flask_mongo_app
                         else
-                            echo "❌ Deployment failed"
+                            echo "❌ Jenkins pipeline container not found"
                         fi
                         
                         if docker ps | grep "flask_mongo_app"; then
