@@ -13,11 +13,3 @@ services:
       - PYTHONPATH=/app
     working_dir: /app
     restart: unless-stopped
-    mem_limit: 128m
-    cpus: 0.2
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
