@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  # Flask app built from local code
+  flask_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flask_mongo_app
+    ports:
+      - "5000:5000"  # Using standard port 5000
+    environment:
+      - MONGO_URI=mongodb+srv://afnan:afnan@cluster0.jv1iq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+      - SECRET_KEY=ba9c73147efc5cf66b15a55e32410ef7cf1e4da81fa7a8391ada00da3c8b30c9
+      - FLASK_APP=app.py
+      - PYTHONPATH=/app
+    volumes:
+      - type: bind
+        source: .
+        target: /app
+        read_only: false
+    working_dir: /app
+    restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.3
