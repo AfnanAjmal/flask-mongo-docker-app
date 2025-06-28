@@ -26,15 +26,13 @@ pipeline {
                 script {
                     sh '''
                         rm -rf jenkins_app || true
-                        mkdir -p jenkins_app/templates
-                        mkdir -p jenkins_app/static
+                        mkdir -p jenkins_app
                         
-                        cp app.py requirements.txt Dockerfile jenkins_app/
-                        cp -rv templates/* jenkins_app/templates/
-                        cp -rv static/* jenkins_app/static/
+                        echo "Copying all project files..."
+                        cp -r . jenkins_app/
                         
-                        echo "Build environment prepared"
-                        ls -R jenkins_app
+                        echo "Build environment prepared with all files"
+                        ls -la jenkins_app
                     '''
                 }
             }
@@ -59,33 +57,17 @@ pipeline {
                         echo "Current running containers:"
                         docker ps --format "table {{.Names}}\t{{.Ports}}"
                         
-                        if docker ps -q --filter "name=${PROJECT_NAME}"; then
-                            echo "Stopping existing Jenkins pipeline containers..."
-                            docker stop \$(docker ps -q --filter "name=${PROJECT_NAME}") || true
-                            docker rm \$(docker ps -aq --filter "name=${PROJECT_NAME}") || true
-                        fi
+                        echo "Stopping any existing Jenkins pipeline containers..."
+                        docker compose -p ${PROJECT_NAME} down || true
                         
                         if docker ps | grep "flask_mongo_app"; then
                             echo "✅ Manual flask_mongo_app is running safely"
                         fi
                         
-                        if docker images -q ${DOCKER_IMAGE}:latest; then
-                            docker rmi ${DOCKER_IMAGE}:latest || true
-                        fi
+                        echo "Starting new deployment with docker compose..."
+                        MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' DOCKER_IMAGE='${DOCKER_IMAGE}' DOCKER_TAG='${DOCKER_TAG}' docker compose -p ${PROJECT_NAME} up -d
                         
-                        sleep 2
-                        
-                        docker run -d \\
-                            --name jenkins_flask_mongo_app \\
-                            -p 5050:5000 \\
-                            -e MONGO_URI='${MONGO_URI}' \\
-                            -e SECRET_KEY='${SECRET_KEY}' \\
-                            -e FLASK_APP=app.py \\
-                            -e PYTHONPATH=/app \\
-                            --memory=128m \\
-                            --cpus=0.2 \\
-                            --restart=unless-stopped \\
-                            ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        sleep 5
                         
                         echo "Deployment status:"
                         docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
