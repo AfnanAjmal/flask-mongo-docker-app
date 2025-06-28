@@ -28,10 +28,11 @@ pipeline {
                         rm -rf jenkins_app || true
                         mkdir -p jenkins_app
                         
-                        echo "Copying all project files..."
-                        cp -r . jenkins_app/
+                        echo "Copying project files..."
+                        cp * jenkins_app/ 2>/dev/null || true
+                        cp -r templates static jenkins_app/ 2>/dev/null || true
                         
-                        echo "Build environment prepared with all files"
+                        echo "Build environment prepared"
                         ls -la jenkins_app
                     '''
                 }
