@@ -61,7 +61,8 @@ pipeline {
                         
                         if docker ps -q --filter "name=${PROJECT_NAME}"; then
                             echo "Stopping existing Jenkins pipeline containers..."
-                            docker-compose -p ${PROJECT_NAME} down
+                            docker stop \$(docker ps -q --filter "name=${PROJECT_NAME}") || true
+                            docker rm \$(docker ps -aq --filter "name=${PROJECT_NAME}") || true
                         fi
                         
                         if docker ps | grep "flask_mongo_app"; then
@@ -74,7 +75,17 @@ pipeline {
                         
                         sleep 2
                         
-                        MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' docker-compose -p ${PROJECT_NAME} up -d
+                        docker run -d \\
+                            --name jenkins_flask_mongo_app \\
+                            -p 5050:5000 \\
+                            -e MONGO_URI='${MONGO_URI}' \\
+                            -e SECRET_KEY='${SECRET_KEY}' \\
+                            -e FLASK_APP=app.py \\
+                            -e PYTHONPATH=/app \\
+                            --memory=128m \\
+                            --cpus=0.2 \\
+                            --restart=unless-stopped \\
+                            ${DOCKER_IMAGE}:${DOCKER_TAG}
                         
                         echo "Deployment status:"
                         docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
