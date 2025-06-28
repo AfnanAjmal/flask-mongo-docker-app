@@ -64,10 +64,11 @@ pipeline {
                         
                         # Check if Jenkins pipeline container is already running
                         if docker ps | grep "jenkins_flask_mongo_app"; then
-                            echo "🔄 Jenkins pipeline container found - stopping for fresh deployment..."
+                            echo "🔄 Jenkins pipeline container found - force stopping existing container..."
                             
-                            # Stop existing container to ensure clean deployment
-                            docker compose -p ${PROJECT_NAME} down || true
+                            # Force stop and remove existing container
+                            docker stop jenkins_flask_mongo_app || true
+                            docker rm jenkins_flask_mongo_app || true
                             
                             echo "🚀 Deploying fresh container with latest changes..."
                             
