@@ -64,19 +64,18 @@ pipeline {
                         
                         # Check if Jenkins pipeline container is already running
                         if docker ps | grep "jenkins_flask_mongo_app"; then
-                            echo "🔄 Jenkins pipeline container found - performing hot reload..."
+                            echo "🔄 Jenkins pipeline container found - stopping for fresh deployment..."
                             
-                            # Copy updated files to running container
-                            docker cp jenkins_app/app.py jenkins_flask_mongo_app:/app/
-                            docker cp jenkins_app/templates jenkins_flask_mongo_app:/app/
-                            docker cp jenkins_app/static jenkins_flask_mongo_app:/app/
+                            # Stop existing container to ensure clean deployment
+                            docker compose -p ${PROJECT_NAME} down || true
                             
-                            # Restart Flask app inside container
-                            docker exec jenkins_flask_mongo_app pkill -f "python.*app.py" || true
-                            sleep 2
-                            docker exec -d jenkins_flask_mongo_app python -u /app/app.py
+                            echo "🚀 Deploying fresh container with latest changes..."
                             
-                            echo "✅ Hot reload completed - changes applied to running container"
+                            # Deploy new container using docker compose
+                            MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' DOCKER_IMAGE='${DOCKER_IMAGE}' DOCKER_TAG='${DOCKER_TAG}' docker compose -p ${PROJECT_NAME} up -d
+                            
+                            sleep 5
+                            echo "✅ Fresh container deployed with latest code"
                             
                         else
                             echo "🚀 No Jenkins pipeline container found - deploying new container..."
