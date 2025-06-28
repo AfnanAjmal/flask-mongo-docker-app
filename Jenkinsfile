@@ -1,11 +1,10 @@
-// Part 2: Jenkins Pipeline for Build Automation
 pipeline {
     agent any
     
     environment {
         DOCKER_IMAGE = 'afnankhan03/flask-mongo-app'
         DOCKER_TAG = "${BUILD_NUMBER}"
-        PROJECT_NAME = 'flask-mongo-jenkins'  // Different project name for Part 2
+        PROJECT_NAME = 'flask-mongo-jenkins'
         MONGO_URI = 'mongodb+srv://afnan:afnan@cluster0.jv1iq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
         SECRET_KEY = 'ba9c73147efc5cf66b15a55e32410ef7cf1e4da81fa7a8391ada00da3c8b30c9'
     }
@@ -17,7 +16,6 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // Clean workspace and fetch code from GitHub
                 cleanWs()
                 checkout scm
             }
@@ -26,18 +24,16 @@ pipeline {
         stage('Prepare Build Environment') {
             steps {
                 script {
-                    // Create directory structure for Part 2
                     sh '''
                         rm -rf jenkins_app || true
                         mkdir -p jenkins_app/templates
                         mkdir -p jenkins_app/static
                         
-                        # Copy application files
                         cp app.py requirements.txt Dockerfile jenkins_app/
                         cp -rv templates/* jenkins_app/templates/
                         cp -rv static/* jenkins_app/static/
                         
-                        echo "Build environment prepared with files:"
+                        echo "Build environment prepared"
                         ls -R jenkins_app
                     '''
                 }
@@ -47,7 +43,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build Docker image for containerized environment
                     sh """
                         cd jenkins_app
                         docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
@@ -60,20 +55,41 @@ pipeline {
         stage('Deploy Container') {
             steps {
                 script {
-                    // Deploy using docker-compose with custom project name
                     sh """
-                        # Stop existing container if any
-                        docker-compose -p ${PROJECT_NAME} down || true
+                        echo "Current running containers:"
+                        docker ps --format "table {{.Names}}\t{{.Ports}}"
                         
-                        # Start new container with volume mount
+                        if docker ps -q --filter "name=${PROJECT_NAME}"; then
+                            echo "Stopping existing Jenkins pipeline containers..."
+                            docker-compose -p ${PROJECT_NAME} down
+                        fi
+                        
+                        if docker ps | grep "flask_mongo_app"; then
+                            echo "✅ Manual flask_mongo_app is running safely"
+                        fi
+                        
+                        if docker images -q ${DOCKER_IMAGE}:latest; then
+                            docker rmi ${DOCKER_IMAGE}:latest || true
+                        fi
+                        
+                        sleep 2
+                        
                         MONGO_URI='${MONGO_URI}' SECRET_KEY='${SECRET_KEY}' docker-compose -p ${PROJECT_NAME} up -d
                         
-                        # Verify deployment
-                        echo "Checking container status:"
-                        docker ps | grep ${PROJECT_NAME}
+                        echo "Deployment status:"
+                        docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
                         
-                        echo "Checking application logs:"
-                        docker logs ${PROJECT_NAME}_jenkins_app
+                        if docker ps | grep "jenkins_flask_mongo_app"; then
+                            echo "✅ Jenkins pipeline container running on port 5050"
+                            sleep 10
+                            docker logs jenkins_flask_mongo_app
+                        else
+                            echo "❌ Deployment failed"
+                        fi
+                        
+                        if docker ps | grep "flask_mongo_app"; then
+                            echo "✅ Manual flask_mongo_app still running (port 5000)"
+                        fi
                     """
                 }
             }
@@ -82,15 +98,27 @@ pipeline {
     
     post {
         always {
-            // Cleanup
-            sh 'docker system prune -f'
+            sh '''
+                docker images | grep afnankhan03/flask-mongo-app || echo "No pipeline images found"
+                docker ps | grep "flask_mongo_app" || echo "Manual container status: not running"
+            '''
         }
         success {
-            echo "Build phase completed successfully - Part 2 requirements met"
+            echo "Build completed successfully"
+            echo "Jenkins pipeline app: http://your-aws-ip:5050"
+            echo "Manual app: http://your-aws-ip:5000"
+            sh 'docker ps | grep jenkins_flask_mongo_app'
         }
         failure {
-            echo "Build phase failed - Check container logs"
-            sh 'docker logs ${PROJECT_NAME}_jenkins_app || true'
+            echo "Build failed"
+            sh '''
+                if docker ps | grep "jenkins_flask_mongo_app"; then
+                    docker logs jenkins_flask_mongo_app
+                else
+                    echo "No pipeline containers running"
+                fi
+            '''
+            sh 'free -h'
         }
     }
 }
